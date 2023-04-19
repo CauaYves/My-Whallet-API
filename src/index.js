@@ -28,6 +28,7 @@ const db = mongoClient.db()
 //esquema de validação dos dados
 
 const registerSchema = joi.object({
+    name: joi.string().min(3).required(),
     email: joi.string().email().required(),
     password: joi.string().min(3).required(),
 });
@@ -36,7 +37,7 @@ const registerSchema = joi.object({
 
 app.post("/cadastro", async (req, res) => {
 
-    const { email, password } = req.body
+    const { email, password, name } = req.body
     const { error } = registerSchema.validate(req.body, { abortEarly: false })
     if (error) return res.status(422).send(error.details.message)
 
@@ -47,6 +48,7 @@ app.post("/cadastro", async (req, res) => {
         if (thisEmailExist) return res.sendStatus(409)
 
         await db.collection("cadastros").insertOne({
+            name: name,
             email,
             password: hash
         })
