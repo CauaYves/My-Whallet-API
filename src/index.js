@@ -15,7 +15,7 @@ dotenv.config()
 
 //conexão com banco de dados
 
-const mongoClient = new MongoClient(process.env.MONGO_URL)
+const mongoClient = new MongoClient(process.env.DATABASE_URL)
 try {
     await mongoClient.connect()
     console.log("Database connected!")
@@ -92,5 +92,5 @@ app.get("/home", async (req, res) =>{
     if(!token) return res.sendStatus(401)
 
 })
-const PORT = 4000
-app.listen(PORT, console.log(`server running on port ${PORT}`))
+const port = process.env.PORT || 4000
+app.listen(port, console.log(`server running on port ${port}`))
