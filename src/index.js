@@ -2,16 +2,20 @@ import express from "express"
 import joi from "joi"
 import { MongoClient, ObjectId } from "mongodb"
 import cors from "cors"
+import { v4 as uuid } from 'uuid'
+import bcrypt from "bcrypt"
+import dotenv from "dotenv"
 
 //configs
 
 const app = express()
 app.use(express.json())
 app.use(cors())
+dotenv.config()
 
 //conexão com banco de dados
 
-const mongoClient = new MongoClient("mongodb://localhost:27017/whallet")
+const mongoClient = new MongoClient(process.env.MONGO_URL)
 try {
     await mongoClient.connect()
     console.log("Database connected!")
@@ -20,7 +24,10 @@ catch (err) {
     console.log(err.message)
 }
 const db = mongoClient.db()
-const registerSchema = joi.object({ //esquema de validação dos dados
+
+//esquema de validação dos dados
+
+const registerSchema = joi.object({
     email: joi.string().email().required(),
     password: joi.string().min(3).required(),
 });
@@ -30,16 +37,19 @@ const registerSchema = joi.object({ //esquema de validação dos dados
 app.post("/cadastro", async (req, res) => {
 
     const { email, password } = req.body
-    const { error, value } = registerSchema.validate({ email, password })
+    const { error } = registerSchema.validate(req.body, { abortEarly: false })
+    if (error) return res.status(422).send(error.details.message)
 
-    if (error) return res.status(422).send(error.details[0].message)
+    const hash = bcrypt.hashSync(password, 5)
+
     try {
+        const thisEmailExist = await db.collection("cadastros").findOne({ email: email })
+        if (thisEmailExist) return res.sendStatus(409)
+
         await db.collection("cadastros").insertOne({
             email,
-            password
+            password: hash
         })
-        const thisEmailExist = await db.collection("cadastros").findOne({email})
-        if(thisEmailExist) return res.sendStatus(409)
     }
     catch (err) {
         res.status(500).send(err.message)
@@ -47,6 +57,40 @@ app.post("/cadastro", async (req, res) => {
 
     res.sendStatus(201)
 })
+app.post("/login", async (req, res) => {
+    const { email, password } = req.body
 
+    if (!email || !password) return res.sendStatus(422)
+
+    try {
+        const userSearch = await db.collection("cadastros").findOne({ email: email })
+        if (!userSearch) return res.sendStatus(404)
+
+        const rightPassword = bcrypt.compareSync(password, userSearch.password)
+        if (!rightPassword) return res.sendStatus(401)
+
+        const token = uuid()
+        res.status(200).send(token)
+    }
+    catch (err) {
+        res.status(500).send(err.message)
+    }
+})
+app.post("/nova-transacao/:tipo", async (req, res) => {
+
+    const { tipo } = req.params
+    const { token } = req.body
+
+    if (!token) return res.sendStatus(401)
+    if (tipo % 1 !== 0) res.sendStatus(422)
+
+    res.sendStatus(200)
+})
+app.get("/home", async (req, res) =>{
+
+    const { token } = req.body
+    if(!token) return res.sendStatus(401)
+
+})
 const PORT = 4000
 app.listen(PORT, console.log(`server running on port ${PORT}`))
