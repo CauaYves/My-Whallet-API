@@ -3,7 +3,7 @@ import joi from "joi"
 import { MongoClient, ObjectId } from "mongodb"
 import cors from "cors"
 import { v4 as uuid } from 'uuid'
-import bcrypt from "bcrypt"
+import bcrypt, { compareSync } from "bcrypt"
 import dotenv from "dotenv"
 
 //configs
@@ -50,7 +50,7 @@ app.post("/cadastro", async (req, res) => {
         await db.collection("cadastros").insertOne({
             name: name,
             email,
-            password: hash
+            password: hash,
         })
     }
     catch (err) {
@@ -62,20 +62,45 @@ app.post("/cadastro", async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
-    if (!email || !password) return res.sendStatus(422)
+    if (!email || !password) return res.status(422).send("campos inválidos")
 
     try {
         const userSearch = await db.collection("cadastros").findOne({ email: email })
-        if (!userSearch) return res.sendStatus(404)
+        if (!userSearch) return res.status(422).send("usuário não encontrado")
 
         const rightPassword = bcrypt.compareSync(password, userSearch.password)
-        if (!rightPassword) return res.sendStatus(401)
+        if (!rightPassword) return res.status(401).send("credenciais incorretas, caso não tenha cadastro acesse a página de cadastro.")
 
         const token = uuid()
+
+        await db.collection("sessoes").insertOne({
+            id: userSearch._id,
+            token
+        })
+
         res.status(200).send(token)
     }
     catch (err) {
         res.status(500).send(err.message)
+    }
+})
+app.get("/auto-login", async (req, res) => {
+    const { authorization } = req.headers
+
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) return res.status(401).send("token não existe, faça login")
+
+    try {
+        const userLogado = db.collection("sessoes").findOne({ token })
+        if (!userLogado) return res.status(401).send("token expirado")
+
+        const user = await db.collection("usuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
+        delete usuario.senha
+
+        res.send((usuario))
+    }
+    catch (error) {
+
     }
 })
 app.post("/nova-transacao/:tipo", async (req, res) => {
@@ -88,10 +113,10 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
 
     res.sendStatus(200)
 })
-app.get("/home", async (req, res) =>{
-
+app.get("/home", async (req, res) => {
     const { token } = req.body
-    if(!token) return res.sendStatus(401)
+
+    if (!token) return res.sendStatus(401)
 
 })
 const port = process.env.PORT || 4000
