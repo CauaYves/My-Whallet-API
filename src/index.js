@@ -3,7 +3,7 @@ import joi from "joi"
 import { MongoClient, ObjectId } from "mongodb"
 import cors from "cors"
 import { v4 as uuid } from 'uuid'
-import bcrypt from "bcrypt"
+import bcrypt, { compareSync } from "bcrypt"
 import dotenv from "dotenv"
 
 //configs
@@ -28,6 +28,7 @@ const db = mongoClient.db()
 //esquema de validação dos dados
 
 const registerSchema = joi.object({
+    name: joi.string().min(3).required(),
     email: joi.string().email().required(),
     password: joi.string().min(3).required(),
 });
@@ -36,7 +37,7 @@ const registerSchema = joi.object({
 
 app.post("/cadastro", async (req, res) => {
 
-    const { email, password } = req.body
+    const { email, password, name } = req.body
     const { error } = registerSchema.validate(req.body, { abortEarly: false })
     if (error) return res.status(422).send(error.details.message)
 
@@ -44,11 +45,12 @@ app.post("/cadastro", async (req, res) => {
 
     try {
         const thisEmailExist = await db.collection("cadastros").findOne({ email: email })
-        if (thisEmailExist) return res.sendStatus(409)
+        if (thisEmailExist) return res.status(409).send("esse email já existe, tente outro")
 
         await db.collection("cadastros").insertOne({
+            name: name,
             email,
-            password: hash
+            password: hash,
         })
     }
     catch (err) {
@@ -57,22 +59,50 @@ app.post("/cadastro", async (req, res) => {
 
     res.sendStatus(201)
 })
+
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
-    if (!email || !password) return res.sendStatus(422)
+    if (!email || !password) return res.status(422).send("campos inválidos")
 
     try {
         const userSearch = await db.collection("cadastros").findOne({ email: email })
-        if (!userSearch) return res.sendStatus(404)
+        if (!userSearch) return res.status(422).send("usuário não encontrado")
 
         const rightPassword = bcrypt.compareSync(password, userSearch.password)
-        if (!rightPassword) return res.sendStatus(401)
+        if (!rightPassword) return res.status(401).send("credenciais incorretas, caso não tenha cadastro acesse a página de cadastro.")
 
         const token = uuid()
+
+        await db.collection("sessoes").insertOne({
+            userid: userSearch._id,
+            token
+        })
+
         res.status(200).send(token)
     }
     catch (err) {
+        res.status(500).send(err.message)
+    }
+})
+app.get("/autologin", async (req, res) => {
+    const { authorization } = req.headers
+
+    const token = authorization?.replace("Bearer ", "")
+    if (!token) return res.status(401).send("token não existe, faça login")
+
+    try {
+
+        //procura pelo token na collection sessoes
+        const userLogado = db.collection("sessoes").findOne({ token: token }) 
+        if (!userLogado) return res.status(401).send("token não existe")
+
+        const user = await db.collection("cadastros").findOne({ _id: new ObjectId(userLogado.id) })
+        delete user.password
+
+        res.send((user))
+    }
+    catch (error) {
         res.status(500).send(err.message)
     }
 })
@@ -86,10 +116,10 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
 
     res.sendStatus(200)
 })
-app.get("/home", async (req, res) =>{
-
+app.get("/home", async (req, res) => {
     const { token } = req.body
-    if(!token) return res.sendStatus(401)
+
+    if (!token) return res.sendStatus(401)
 
 })
 const port = process.env.PORT || 4000
