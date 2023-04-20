@@ -94,13 +94,13 @@ app.get("/autologin", async (req, res) => {
     try {
 
         //procura pelo token na collection sessoes
-        const userLogado = db.collection("sessoes").findOne({ token: token }) 
+        const userLogado = await db.collection("sessoes").findOne({ token: token }) 
         if (!userLogado) return res.status(401).send("token não existe")
 
         const user = await db.collection("cadastros").findOne({ _id: new ObjectId(userLogado.id) })
         delete user.password
 
-        res.send((user))
+        res.send(user)
     }
     catch (error) {
         res.status(500).send(err.message)
