@@ -45,7 +45,7 @@ app.post("/cadastro", async (req, res) => {
 
     try {
         const thisEmailExist = await db.collection("cadastros").findOne({ email: email })
-        if (thisEmailExist) return res.sendStatus(409)
+        if (thisEmailExist) return res.status(409).send("esse email já existe, tente outro")
 
         await db.collection("cadastros").insertOne({
             name: name,
