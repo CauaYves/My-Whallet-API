@@ -100,7 +100,7 @@ app.get("/auto-login", async (req, res) => {
         res.send((usuario))
     }
     catch (error) {
-
+        res.status(500).send(err.message)
     }
 })
 app.post("/nova-transacao/:tipo", async (req, res) => {
