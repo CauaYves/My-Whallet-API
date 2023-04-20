@@ -59,6 +59,7 @@ app.post("/cadastro", async (req, res) => {
 
     res.sendStatus(201)
 })
+
 app.post("/login", async (req, res) => {
     const { email, password } = req.body
 
@@ -74,7 +75,7 @@ app.post("/login", async (req, res) => {
         const token = uuid()
 
         await db.collection("sessoes").insertOne({
-            id: userSearch._id,
+            userid: userSearch._id,
             token
         })
 
@@ -84,20 +85,22 @@ app.post("/login", async (req, res) => {
         res.status(500).send(err.message)
     }
 })
-app.get("/auto-login", async (req, res) => {
+app.get("/autologin", async (req, res) => {
     const { authorization } = req.headers
 
     const token = authorization?.replace("Bearer ", "")
     if (!token) return res.status(401).send("token não existe, faça login")
 
     try {
-        const userLogado = db.collection("sessoes").findOne({ token })
-        if (!userLogado) return res.status(401).send("token expirado")
 
-        const user = await db.collection("usuarios").findOne({ _id: new ObjectId(sessao.idUsuario) })
-        delete usuario.senha
+        //procura pelo token na collection sessoes
+        const userLogado = db.collection("sessoes").findOne({ token: token }) 
+        if (!userLogado) return res.status(401).send("token não existe")
 
-        res.send((usuario))
+        const user = await db.collection("cadastros").findOne({ _id: new ObjectId(userLogado.id) })
+        delete user.password
+
+        res.send((user))
     }
     catch (error) {
         res.status(500).send(err.message)
