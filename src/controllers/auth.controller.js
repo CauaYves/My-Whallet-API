@@ -26,8 +26,6 @@ export async function login(req, res) {
             res.status(500).send(err.message)
         }
     }
-
-
     //caso não haja token será inserido um no banco de sessoes
     if (!authorization) {
         try {
