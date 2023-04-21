@@ -53,8 +53,6 @@ export async function login(req, res) {
 export async function cadastro(req, res) {
 
     const { email, password, name } = req.body
-    const { error } = registerSchema.validate(req.body, { abortEarly: false })
-    if (error) return res.status(422).send(error.details.message)
 
     const hash = bcrypt.hashSync(password, 5)
 
