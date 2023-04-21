@@ -1,8 +1,7 @@
 import bcrypt from "bcrypt"
-import { loginSchema, registerSchema } from "../schema/user.schema.js"
+import { loginSchema } from "../schema/user.schema.js"
 import { db } from "../database/database.connection.js"
 import { v4 as uuid } from "uuid"
-import { ObjectId } from "mongodb"
 
 export async function login(req, res) {
     const { email, password } = req.body
@@ -42,7 +41,7 @@ export async function login(req, res) {
                 token
             })
 
-            res.status(200).send(token)
+            res.status(200).send({token: token, name: userSearch.name})
         }
         catch (err) {
             res.status(500).send(err.message)
