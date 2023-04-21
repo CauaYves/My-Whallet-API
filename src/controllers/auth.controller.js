@@ -8,14 +8,13 @@ export async function login(req, res) {
     const { authorization } = req.headers
 
     //validação de dados
-
+    const token = authorization?.replace("Bearer ", "")
     const { error } = loginSchema.validate(req.body)
     if (error) return res.status(422).send("dados inválidos")
 
     //caso haja token fará login automatico
     if (authorization) {
         try {
-            const token = authorization?.replace("Bearer ", "")
             const tokenStoked = await db.collection("sessoes").findOne({ token: token })
             const user = await db.collection("cadastros").findOne({ _id: tokenStoked.userid })
             delete user.password
