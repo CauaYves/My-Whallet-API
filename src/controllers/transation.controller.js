@@ -1,3 +1,4 @@
+import dayjs from "dayjs"
 import { db } from "../database/database.connection.js"
 import { entrySchema } from "../schema/user.schema.js"
 
@@ -20,7 +21,8 @@ export async function transacao(req, res) {
         user,
         type,
         value,
-        description
+        description,
+        date: dayjs().format('DD/MM')
     })
 
     res.sendStatus(201)
