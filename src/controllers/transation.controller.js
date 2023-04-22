@@ -17,6 +17,10 @@ export async function transacao(req, res) {
     const tokenStoked = await db.collection("sessoes").findOne({ token: token })
     const user = await db.collection("cadastros").findOne({ _id: tokenStoked.userid })
 
+    delete user.password
+    delete user.email
+    delete user.name
+    console.log(user)
     await db.collection("transacoes").insertOne({
         user,
         type,
