@@ -7,7 +7,6 @@ export async function transacao(req, res) {
 
     const { type, value, description } = req.body
     const { authorization } = req.headers
-    
 
     if (!authorization) return res.sendStatus(401)
 
@@ -23,7 +22,7 @@ export async function transacao(req, res) {
     delete user.password
     delete user.email
     delete user.name
-    
+
     await db.collection("transacoes").insertOne({
         user,
         type,
@@ -34,5 +33,21 @@ export async function transacao(req, res) {
     const transacoes = await db.collection("transacoes").find().toArray()
     //filtrar transacoes e enviar apenas as do usuario correspondente ao token
     const userTransactions = transacoes.filter(transacao => transacao.user._id.equals(userId));
-    res.status(200).send(userTransactions)
+    res.sendStatus(200)
+}
+export async function operations(req, res) {
+    //valida token
+    const { authorization } = req.headers
+    if(!authorization) return res.sendStatus(401)
+    const token = authorization?.replace("Bearer ", "")
+
+    //procura pelo usuario com o token correspondente
+    const tokenStoked = await db.collection("sessoes").findOne({ token: token })
+    const userId = new ObjectId(tokenStoked.userid)
+
+    //procura pelas transações do usuario
+    const operations = await db.collection("transacoes").find().toArray()
+    const userTransactions = operations.filter(transacao => transacao.user._id.equals(userId));
+    //envia transações
+    res.send(userTransactions)
 }
