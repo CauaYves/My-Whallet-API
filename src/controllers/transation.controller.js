@@ -45,10 +45,12 @@ export async function operations(req, res) {
     //procura pelo usuario com o token correspondente
     const tokenStoked = await db.collection("sessoes").findOne({ token: token })
     const userId = new ObjectId(tokenStoked.userid)
-
+    const user = await db.collection("cadastros").findOne({ _id: tokenStoked.userid })
+    const name = user.name
     //procura pelas transações do usuario
     const operations = await db.collection("transacoes").find().toArray()
     const userTransactions = operations.filter(transacao => transacao.user._id.equals(userId));
+
     //calcula o valor total das operalçies
     const total = userTransactions.map(transf => {
         
@@ -57,5 +59,5 @@ export async function operations(req, res) {
         return sinal + value
     })
     const result = eval(total.join(""))
-    res.send({ userTransactions, result })
+    res.send({ userTransactions, result, name })
 }
