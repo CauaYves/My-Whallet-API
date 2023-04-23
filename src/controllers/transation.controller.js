@@ -35,10 +35,11 @@ export async function transacao(req, res) {
     const userTransactions = transacoes.filter(transacao => transacao.user._id.equals(userId));
     res.sendStatus(200)
 }
+
 export async function operations(req, res) {
     //valida token
     const { authorization } = req.headers
-    if(!authorization) return res.sendStatus(401)
+    if (!authorization) return res.sendStatus(401)
     const token = authorization?.replace("Bearer ", "")
 
     //procura pelo usuario com o token correspondente
@@ -48,6 +49,13 @@ export async function operations(req, res) {
     //procura pelas transações do usuario
     const operations = await db.collection("transacoes").find().toArray()
     const userTransactions = operations.filter(transacao => transacao.user._id.equals(userId));
-    //envia transações
-    res.send(userTransactions)
+    //calcula o valor total das operalçies
+    const total = userTransactions.map(transf => {
+        
+        let sinal = transf.type
+        let value = transf.value
+        return sinal + value
+    })
+    const result = eval(total.join(""))
+    res.send({ userTransactions, result })
 }
